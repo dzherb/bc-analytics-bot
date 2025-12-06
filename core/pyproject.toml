@@ -1,0 +1,58 @@
+[project]
+name = "bc-analytics-bot"
+version = "0.0.1"
+description = ""
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = []
+
+[tool.ruff]
+extend-exclude = []
+line-length = 79
+target-version = "py313"
+
+[tool.ruff.lint]
+select = [
+    "A",    # flake8-builtins
+    "ASYNC",# flake8-async
+    "B",    # flake8-bugbear
+    "LOG",  # flake8-logging
+    "G",    # flake8-logging-format
+    "RUF",  # Ruff-specific rules
+    "PL",   # Pylint
+    "C90",  # mccabe
+    "SIM",  # flake8-simplify
+    "RET",  # flake8-return
+    "F",    # Pyflakes
+    "E",    # pcodestyle
+    "I",    # isort
+    "N",    # pep8-naming
+    "B",    # flake8-bugbear
+    "A",    # flake8-builtins
+    "COM",  # flake8-commas
+    "C4",   # flake8-comprehensions
+    "ISC",  # flake8-implicit-str-concat
+    "ICN",  # flake8-import-conventions
+    "T20",  # flake8-print
+    "Q",    # flake8-quotes
+    "RET",  # flake8-return
+    "FIX",  # flake8-fixme
+    "ERA",  # eradicate
+]
+
+[tool.ruff.lint.isort]
+known-first-party = []
+force-sort-within-sections = true
+order-by-type = false
+
+[tool.ruff.lint.flake8-quotes]
+inline-quotes = "single"
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.mypy]
+plugins = []
+explicit_package_bases = true
+strict = true
+exclude = []
