@@ -4,7 +4,19 @@ version = "0.0.1"
 description = ""
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "aiogram>=3.23.0",
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.12.0",
+]
+
+[dependency-groups]
+dev = [
+    "dotenv-linter>=0.7.0",
+    "mypy>=1.19.0",
+    "pytest>=9.0.1",
+    "ruff>=0.14.8",
+]
 
 [tool.ruff]
 extend-exclude = []
@@ -52,7 +64,7 @@ inline-quotes = "single"
 quote-style = "single"
 
 [tool.mypy]
-plugins = []
+plugins = ["pydantic.mypy"]
 explicit_package_bases = true
 strict = true
 exclude = []
