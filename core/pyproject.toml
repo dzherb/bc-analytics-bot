@@ -52,6 +52,10 @@ select = [
     "ERA",  # eradicate
 ]
 
+ignore = [
+    "COM812",
+]
+
 [tool.ruff.lint.isort]
 known-first-party = []
 force-sort-within-sections = true
