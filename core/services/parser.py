@@ -110,11 +110,8 @@ class ParticipantsExporter:
         user_id: str | None,
         username: str | None,
         full_name: str | None,
-        p_type: ParticipantType,
+        p_type: ParticipantType | set[ParticipantType],
     ) -> None:
-        if user_id and ParticipantsExporter._is_channel(user_id):
-            return
-
         key = user_id or username or full_name
         if not key:
             return
@@ -126,13 +123,17 @@ class ParticipantsExporter:
                 full_name=full_name,
                 seen_as=set(),
             )
-        participants_dict[key].seen_as.add(p_type)
+
+        if isinstance(p_type, set):
+            participants_dict[key].seen_as.update(p_type)
+        else:
+            participants_dict[key].seen_as.add(p_type)
 
     def export(self, messages: TelegramMessages) -> ParticipantsReport:
         participants_dict: dict[str, Participant] = {}
 
         def handle_message(msg: TelegramMessage) -> None:
-            ParticipantsExporter._add_participant(
+            self._add_participant(
                 participants_dict,
                 user_id=msg.from_id,
                 username=None,
@@ -140,7 +141,7 @@ class ParticipantsExporter:
                 p_type=ParticipantType.AUTHOR,
             )
 
-            ParticipantsExporter._add_participant(
+            self._add_participant(
                 participants_dict,
                 user_id=msg.actor_id,
                 username=None,
@@ -148,7 +149,7 @@ class ParticipantsExporter:
                 p_type=ParticipantType.ACTOR,
             )
 
-            ParticipantsExporter._add_participant(
+            self._add_participant(
                 participants_dict,
                 user_id=msg.forwarded_from_id,
                 username=None,
