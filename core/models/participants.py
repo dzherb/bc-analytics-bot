@@ -22,6 +22,6 @@ class Participant(BaseModel):
     seen_as: set[ParticipantType] = set()
 
 
-class ParticipantsExport(BaseModel):
+class ParticipantsReport(BaseModel):
     exported_at: datetime
     participants: list[Participant]
