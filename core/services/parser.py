@@ -98,52 +98,58 @@ class JsonTelegramParser(BaseTelegramParser):
 
 
 class ParticipantsExporter:
-    def _is_channel(self, actor_id: str | None) -> bool:
+    @staticmethod
+    def _is_channel(actor_id: str | None) -> bool:
         if not actor_id:
             return False
         return actor_id.startswith('channel')
 
+    @staticmethod
+    def _add_participant(
+        participants_dict: dict[str, Participant],
+        user_id: str | None,
+        username: str | None,
+        full_name: str | None,
+        p_type: ParticipantType,
+    ) -> None:
+        if user_id and ParticipantsExporter._is_channel(user_id):
+            return
+
+        key = user_id or username or full_name
+        if not key:
+            return
+
+        if key not in participants_dict:
+            participants_dict[key] = Participant(
+                user_id=user_id,
+                username=username,
+                full_name=full_name,
+                seen_as=set(),
+            )
+        participants_dict[key].seen_as.add(p_type)
+
     def export(self, messages: TelegramMessages) -> ParticipantsReport:
         participants_dict: dict[str, Participant] = {}
 
-        def add_participant(
-            user_id: str | None,
-            username: str | None,
-            full_name: str | None,
-            p_type: ParticipantType,
-        ) -> None:
-            if user_id and self._is_channel(user_id):
-                return
-
-            key = user_id or username or full_name
-            if not key:
-                return
-
-            if key not in participants_dict:
-                participants_dict[key] = Participant(
-                    user_id=user_id,
-                    username=username,
-                    full_name=full_name,
-                    seen_as=set(),
-                )
-            participants_dict[key].seen_as.add(p_type)
-
         def handle_message(msg: TelegramMessage) -> None:
-            add_participant(
+            ParticipantsExporter._add_participant(
+                participants_dict,
                 user_id=msg.from_id,
                 username=None,
                 full_name=msg.from_,
                 p_type=ParticipantType.AUTHOR,
             )
 
-            add_participant(
+            ParticipantsExporter._add_participant(
+                participants_dict,
                 user_id=msg.actor_id,
                 username=None,
                 full_name=msg.actor,
                 p_type=ParticipantType.ACTOR,
             )
 
-            add_participant(
+            ParticipantsExporter._add_participant(
+                participants_dict,
                 user_id=msg.forwarded_from_id,
                 username=None,
                 full_name=msg.forwarded_from,
@@ -156,7 +162,8 @@ class ParticipantsExporter:
                         isinstance(part, TelegramComplexText)
                         and part.type == 'mention'
                     ):
-                        add_participant(
+                        ParticipantsExporter._add_participant(
+                            participants_dict,
                             user_id=None,
                             username=part.text,
                             full_name=None,
@@ -169,7 +176,8 @@ class ParticipantsExporter:
                 if not reaction.recent:
                     continue
                 for recent in reaction.recent:
-                    add_participant(
+                    ParticipantsExporter._add_participant(
+                        participants_dict,
                         user_id=recent.actor_id,
                         username=None,
                         full_name=recent.actor,
