@@ -21,7 +21,18 @@ class Participant(BaseModel):
 
     seen_as: set[ParticipantType] = set()
 
+    def __hash__(self) -> int:
+        return hash((self.user_id))
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Participant):
+            return NotImplemented
+        return self.user_id == other.user_id
+
+
+type ParticipantList = list[Participant]
+
 
 class ParticipantsReport(BaseModel):
     exported_at: datetime
-    participants: list[Participant]
+    participants: ParticipantList
