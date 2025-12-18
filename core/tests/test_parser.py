@@ -88,7 +88,7 @@ def test_extracts_reactors_from_reactions_recent() -> None:
     assert 'reaction' in by_id['user4'].seen_as
 
 
-def test_excludes_channels_by_id_prefix() -> None:
+def test_channels_has_channel_tag() -> None:
     export = {
         'messages': [
             {
@@ -116,10 +116,16 @@ def test_excludes_channels_by_id_prefix() -> None:
     }
 
     result = parse_participants_export(export)
-    ids = {p.user_id for p in result.participants if p.user_id}
+    participants_by_id = {
+        p.user_id: p for p in result.participants if p.user_id
+    }
 
-    assert 'user7' in ids
-    assert not any((x or '').startswith('channel') for x in ids)
+    assert 'user7' in participants_by_id
+    assert 'channel123' in participants_by_id
+
+    channel_participant = participants_by_id['channel123']
+
+    assert ParticipantType.CHANNEL in channel_participant.seen_as
 
 
 def test_does_not_create_empty_participant() -> None:
@@ -156,7 +162,7 @@ def test_merges_participants() -> None:
         seen_as={ParticipantType.AUTHOR},
     )
 
-    merged = merge_participants([{p1, p3}, {p2}])
+    merged = merge_participants([[p1, p3], [p2]])
 
     by_id = {p.user_id: p for p in merged}
     assert len(merged) == 2  # noqa: PLR2004

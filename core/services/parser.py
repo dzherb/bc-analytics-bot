@@ -133,28 +133,44 @@ class ParticipantsExporter:
         participants_dict: dict[str, Participant] = {}
 
         def handle_message(msg: TelegramMessage) -> None:
+            from_id_type = (
+                {ParticipantType.CHANNEL, ParticipantType.AUTHOR}
+                if ParticipantsExporter._is_channel(msg.from_id)
+                else ParticipantType.AUTHOR
+            )
+
             self._add_participant(
                 participants_dict,
                 user_id=msg.from_id,
                 username=None,
                 full_name=msg.from_,
-                p_type=ParticipantType.AUTHOR,
+                p_type=from_id_type,
             )
 
+            actor_id_type = (
+                {ParticipantType.CHANNEL, ParticipantType.ACTOR}
+                if ParticipantsExporter._is_channel(msg.actor_id)
+                else ParticipantType.ACTOR
+            )
             self._add_participant(
                 participants_dict,
                 user_id=msg.actor_id,
                 username=None,
                 full_name=msg.actor,
-                p_type=ParticipantType.ACTOR,
+                p_type=actor_id_type,
             )
 
+            forwarded_id_type = (
+                {ParticipantType.CHANNEL, ParticipantType.FORWARDED_FROM}
+                if ParticipantsExporter._is_channel(msg.forwarded_from_id)
+                else ParticipantType.FORWARDED_FROM
+            )
             self._add_participant(
                 participants_dict,
                 user_id=msg.forwarded_from_id,
                 username=None,
                 full_name=msg.forwarded_from,
-                p_type=ParticipantType.FORWARDED_FROM,
+                p_type=forwarded_id_type,
             )
 
             if isinstance(msg.text, list):
