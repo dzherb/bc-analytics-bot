@@ -24,5 +24,5 @@ run-bot:
 	@uv run -m entrypoints.telegram_bot
 
 .PHONY test:
-run-bot:
+test:
 	@uv run -m pytest -q
