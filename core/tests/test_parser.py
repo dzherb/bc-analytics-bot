@@ -1,4 +1,6 @@
+from models.participants import Participant, ParticipantType
 from services.parser import (
+    merge_participants,
     parse_participants_export,
 )
 
@@ -132,3 +134,34 @@ def test_does_not_create_empty_participant() -> None:
 
     result = parse_participants_export(export)
     assert result.participants == []
+
+
+def test_merges_participants() -> None:
+    p1 = Participant(
+        user_id='user1',
+        username='@alice2',  # user_id уникальнее чем username
+        full_name='Alice A',
+        seen_as={ParticipantType.AUTHOR},
+    )
+    p2 = Participant(
+        user_id='user1',
+        username='@alice',
+        full_name='Alice A',
+        seen_as={ParticipantType.MENTION},
+    )
+    p3 = Participant(
+        user_id='user2',
+        username='@bob',
+        full_name='Bob B',
+        seen_as={ParticipantType.AUTHOR},
+    )
+
+    merged = merge_participants([{p1, p3}, {p2}])
+
+    by_id = {p.user_id: p for p in merged}
+    assert len(merged) == 2  # noqa: PLR2004
+    assert by_id['user1'].seen_as == {
+        ParticipantType.AUTHOR,
+        ParticipantType.MENTION,
+    }
+    assert by_id['user2'].seen_as == {ParticipantType.AUTHOR}

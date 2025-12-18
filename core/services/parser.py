@@ -6,6 +6,7 @@ from typing import Any, Protocol
 
 from models.participants import (
     Participant,
+    ParticipantList,
     ParticipantsReport,
     ParticipantType,
 )
@@ -14,6 +15,27 @@ from models.telegram_message import (
     TelegramMessage,
     TelegramMessages,
 )
+
+
+def merge_participants(participants: list[ParticipantList]) -> ParticipantList:
+    merged_dict: dict[str, Participant] = {}
+
+    for part_list in participants:
+        for participant in part_list:
+            key = participant.user_id
+            if not key:
+                continue
+
+            if key not in merged_dict:
+                merged_dict[key] = Participant(
+                    user_id=participant.user_id,
+                    username=participant.username,
+                    full_name=participant.full_name,
+                    seen_as=set(),
+                )
+            merged_dict[key].seen_as.update(participant.seen_as)
+
+    return list(merged_dict.values())
 
 
 def parse_messages(export_json: dict[str, Any]) -> TelegramMessages:
