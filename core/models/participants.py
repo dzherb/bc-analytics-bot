@@ -1,7 +1,7 @@
 from datetime import datetime
 import enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ParticipantType(enum.StrEnum):
@@ -19,7 +19,10 @@ class Participant(BaseModel):
     username: str | None = None
     full_name: str | None = None
 
-    seen_as: set[ParticipantType] = set()
+    about: str | None = None
+    registered_at: datetime | None = None
+
+    seen_as: set[ParticipantType] = Field(default_factory=set)
 
     def __hash__(self) -> int:
         return hash((self.user_id))
