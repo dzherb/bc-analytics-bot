@@ -1,8 +1,41 @@
+import pytest
+
 from models.participants import Participant, ParticipantType
 from services.parser import (
+    is_deleted_account,
     merge_participants,
     parse_participants_export,
 )
+
+
+@pytest.mark.parametrize(
+    'full_name',
+    [
+        'deleted account',
+        ' Deleted Account ',
+        'DELETED ACCOUNT',
+        'удалённый аккаунт',
+        ' УДАЛЁННЫЙ АККАУНТ ',  # noqa: RUF001
+    ],
+)
+def test_is_deleted_account_true(full_name: str) -> None:
+    assert is_deleted_account(full_name)
+
+
+@pytest.mark.parametrize(
+    'full_name',
+    [
+        None,
+        '',
+        '   ',
+        'deleted  account',
+        'deleted account!',
+        'not deleted account',
+        'удаленный аккаунт',
+    ],
+)
+def test_is_deleted_account_false(full_name: str | None) -> None:
+    assert not is_deleted_account(full_name)
 
 
 def test_extracts_authors_and_dedupes_by_user_id() -> None:
