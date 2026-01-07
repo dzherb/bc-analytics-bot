@@ -32,6 +32,7 @@ from services.parser import (
 
 MAX_FILES_PER_BATCH = 10
 INLINE_USERNAMES_MAX_PARTICIPANTS = 50
+INLINE_PARTICIPANTS_MESSAGE_MAX_LENGTH = 3800
 
 
 class UploadState(StatesGroup):
@@ -171,6 +172,83 @@ async def _download_export_json(
     return parsed
 
 
+async def _collect_participant_lists_from_files(
+    bot: Bot,
+    *,
+    files: list[dict[str, Any]],
+) -> tuple[list[list[Participant]], str | None]:
+    participant_lists: list[list[Participant]] = []
+
+    for item in files:
+        file_id = item.get('file_id')
+        file_name = item.get('file_name') or 'file'
+        if not isinstance(file_id, str) or not file_id:
+            continue
+
+        try:
+            export_json = await _download_export_json(bot, file_id=file_id)
+            messages = parse_messages(export_json)
+            report = export_participants(messages)
+            participant_lists.append(report.participants)
+        except Exception:
+            return ([], str(file_name))
+
+    return (participant_lists, None)
+
+
+def _merge_filtered_participants(
+    participant_lists: list[list[Participant]],
+) -> list[Participant]:
+    filtered_lists = [
+        [p for p in part_list if not is_deleted_account(p.full_name)]
+        for part_list in participant_lists
+    ]
+    return merge_participants(filtered_lists)
+
+
+def _save_participants_excel(
+    *,
+    participants: list[Participant],
+    export_path: Path,
+    exported_at: datetime,
+) -> None:
+    export_excel(
+        ParticipantsReport(
+            exported_at=exported_at,
+            participants=participants,
+        ),
+        str(export_path),
+    )
+
+
+async def _try_send_inline_participants(
+    message: Message,
+    *,
+    participants: list[Participant],
+) -> bool:
+    if len(participants) > INLINE_USERNAMES_MAX_PARTICIPANTS:
+        return False
+
+    def _sort_key(p: Participant) -> tuple[int, str]:
+        if p.username:
+            return (0, _normalize_username(p.username).casefold())
+        if p.full_name:
+            return (1, p.full_name.casefold())
+        return (2, (p.user_id or '').casefold())
+
+    lines = [
+        _format_participant_details(p)
+        for p in sorted(participants, key=_sort_key)
+    ]
+    text = '\n\n'.join(lines)
+
+    if len(text) > INLINE_PARTICIPANTS_MESSAGE_MAX_LENGTH:
+        return False
+
+    await message.answer(text)
+    return True
+
+
 @dp.message(CommandStart())
 async def command_start_handler(message: Message, state: FSMContext) -> None:
     await state.set_state(UploadState.collecting)
@@ -191,6 +269,13 @@ async def command_start_handler(message: Message, state: FSMContext) -> None:
 
 @dp.message(Command('done'))
 async def done_handler(message: Message, state: FSMContext) -> None:
+    if message.bot is None:
+        await message.answer(
+            _escape_markdown_v2(
+                'Не удалось получить доступ к боту. Повторите запрос позже.'
+            ),
+        )
+        return
     data = await state.get_data()
     files: list[dict[str, Any]] = list(data.get('files') or [])
     if not files:
@@ -201,66 +286,36 @@ async def done_handler(message: Message, state: FSMContext) -> None:
         )
         return
 
-    participant_lists: list[list[Participant]] = []
-    for item in files:
-        file_id = item.get('file_id')
-        file_name = item.get('file_name') or 'file'
-        if not isinstance(file_id, str) or not file_id:
-            continue
-
-        try:
-            export_json = await _download_export_json(
-                message.bot,
-                file_id=file_id,
+    (
+        participant_lists,
+        failed_file_name,
+    ) = await _collect_participant_lists_from_files(
+        message.bot,
+        files=files,
+    )
+    if failed_file_name is not None:
+        await state.clear()
+        await message.answer(
+            _escape_markdown_v2(
+                f'Не удалось обработать файл: {failed_file_name}'
             )
-            messages = parse_messages(export_json)
-            report = export_participants(messages)
-            participant_lists.append(report.participants)
-        except Exception:
-            await state.clear()
-            await message.answer(
-                _escape_markdown_v2(f'Не удалось обработать файл: {file_name}')
-            )
-            return
-
-    filtered_lists: list[list[Participant]] = []
-    for part_list in participant_lists:
-        filtered_lists.append(
-            [p for p in part_list if not is_deleted_account(p.full_name)]
         )
+        return
 
-    participants = merge_participants(filtered_lists)
-    participants_count = len(participants)
-
+    participants = _merge_filtered_participants(participant_lists)
     await state.clear()
 
-    if participants_count <= INLINE_USERNAMES_MAX_PARTICIPANTS:
+    if await _try_send_inline_participants(message, participants=participants):
+        return
 
-        def _sort_key(p: Participant) -> tuple[int, str]:
-            if p.username:
-                return (0, _normalize_username(p.username).casefold())
-            if p.full_name:
-                return (1, p.full_name.casefold())
-            return (2, (p.user_id or '').casefold())
-
-        lines = [
-            _format_participant_details(p)
-            for p in sorted(participants, key=_sort_key)
-        ]
-        text = '\n\n'.join(lines)
-
-        if len(text) <= 3800:
-            await message.answer(text)
-            return
-
+    exported_at = datetime.now(timezone.utc)
+    export_filename = f'participants_{exported_at.date().isoformat()}.xlsx'
     with tempfile.TemporaryDirectory() as tmpdir:
-        export_path = Path(tmpdir) / 'participants.xlsx'
-        export_excel(
-            ParticipantsReport(
-                exported_at=datetime.now(timezone.utc),
-                participants=participants,
-            ),
-            str(export_path),
+        export_path = Path(tmpdir) / export_filename
+        _save_participants_excel(
+            participants=participants,
+            export_path=export_path,
+            exported_at=exported_at,
         )
         await message.answer_document(FSInputFile(str(export_path)))
 

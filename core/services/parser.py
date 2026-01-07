@@ -41,7 +41,7 @@ def merge_participants(participants: list[ParticipantList]) -> ParticipantList:
             if participant.user_id:
                 key = f'id:{participant.user_id}'
             elif participant.username:
-                key = f'un:{_normalize_username(participant.username).casefold()}'
+                key = f'un:{_normalize_username(participant.username).casefold()}'  # noqa: E501
             elif participant.full_name:
                 key = f'nm:{participant.full_name.strip().casefold()}'
 
