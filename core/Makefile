@@ -22,3 +22,7 @@ fullcheck: lint lint-dotenv typecheck
 .PHONY run-bot:
 run-bot:
 	@uv run -m entrypoints.telegram_bot
+
+.PHONY test:
+test:
+	@uv run -m pytest -q
