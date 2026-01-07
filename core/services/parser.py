@@ -17,12 +17,34 @@ from models.telegram_message import (
 )
 
 
+def is_deleted_account(full_name: str | None) -> bool:
+    if not full_name:
+        return False
+    normalized = full_name.strip().casefold()
+    return normalized in {
+        'deleted account',
+        'удалённый аккаунт',
+    }
+
+
+def _normalize_username(username: str) -> str:
+    username = username.strip()
+    return username if username.startswith('@') else f'@{username}'
+
+
 def merge_participants(participants: list[ParticipantList]) -> ParticipantList:
     merged_dict: dict[str, Participant] = {}
 
     for part_list in participants:
         for participant in part_list:
-            key = participant.user_id
+            key: str | None = None
+            if participant.user_id:
+                key = f'id:{participant.user_id}'
+            elif participant.username:
+                key = f'un:{_normalize_username(participant.username).casefold()}'
+            elif participant.full_name:
+                key = f'nm:{participant.full_name.strip().casefold()}'
+
             if not key:
                 continue
 
