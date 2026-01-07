@@ -4,8 +4,29 @@
 - Убеждаемся, что в системе установлен пакетный менеджер [uv](https://docs.astral.sh/uv/) и make (по-умолчанию идет с Linux и MacOS)
 - Выполняем команду
     ```bash  
-    make runserver
+    make run-bot
     ```
+
+---
+
+## Запуск через Docker
+
+- Создаем файл `.env` по примеру `.env.template` и заполняем `TELEGRAM_BOT_TOKEN`.
+- Собираем образ и запускаем контейнер:
+
+```bash
+docker compose -f docker/docker-compose.yml up --build
+```
+
+Полезные команды:
+
+```bash
+# посмотреть логи
+docker compose -f docker/docker-compose.yml logs -f
+
+# остановить
+docker compose -f docker/docker-compose.yml down
+```
 
 ---
 
