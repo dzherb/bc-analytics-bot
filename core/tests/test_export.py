@@ -1,4 +1,5 @@
 from datetime import datetime
+from pathlib import Path
 
 from openpyxl import load_workbook
 
@@ -13,7 +14,7 @@ from services.export import (
 )
 
 
-def test_export_csv_with_export_date_header(tmp_path) -> None:
+def test_export_csv_with_export_date_header(tmp_path: Path) -> None:
     participants = [
         Participant(
             user_id='user123',
@@ -40,7 +41,7 @@ def test_export_csv_with_export_date_header(tmp_path) -> None:
     assert 'Дата экспорта' not in content[1]
 
 
-def test_export_excel_with_export_date_header(tmp_path) -> None:
+def test_export_excel_with_export_date_header(tmp_path: Path) -> None:
     participants = [
         Participant(
             user_id='user123',
@@ -62,6 +63,8 @@ def test_export_excel_with_export_date_header(tmp_path) -> None:
 
     workbook = load_workbook(file_path)
     worksheet = workbook.active
+
+    assert worksheet is not None
 
     assert worksheet.cell(row=1, column=1).value == 'Дата экспорта'
     assert worksheet.cell(row=1, column=2).value == '2024-01-01'
